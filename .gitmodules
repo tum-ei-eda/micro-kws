@@ -1,0 +1,3 @@
+[submodule "record"]
+	path = record
+	url = https://gitlab.lrz.de/de-tum-ei-eda-esl/ESD4ML/tum-speech-recording.git

@@ -1,0 +1,106 @@
+{
+  "executors": [
+    "aot"
+  ],
+  "export_datetime": "2022-04-14 16:51:30Z",
+  "external_dependencies": [
+    {
+      "short_name": "tvm_standalone_crt",
+      "url": "./runtime",
+      "url_type": "mlf_path",
+      "version_spec": "0.9.dev0"
+    }
+  ],
+  "memory": {
+    "functions": {
+      "main": [
+        {
+          "constants_size_bytes": 0,
+          "device": 1,
+          "io_size_bytes": 1964,
+          "workspace_size_bytes": 22240
+        }
+      ],
+      "operator_functions": [
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_conv2d_NCHWc_add_cast_multiply_add_right_shift_cast_add_clip_ca_41d3203833793a2a__1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_softmax_divide_add_clip_round_cast",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_dense_add_fixed_point_multiply_add_clip_cast_cast_subtract_cast_multipl_fda0ebd7d134af61_",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_reshape_layout_transform_cast_subtract_layout_transform",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_max_pool2d_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_conv2d_NCHWc_add_cast_multiply_add_right_shift_cast_add_clip_ca_41d3203833793a2a_",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_layout_transform_layout_transform_reshape_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_layout_transform",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "model_name": "default",
+  "style": "full-model",
+  "target": {
+    "1": "c -keys=cpu -constants-byte-alignment=4 -executor=aot -interface-api=c -link-params=0 -unpacked-api=1 -workspace-byte-alignment=4"
+  },
+  "version": 5
+}

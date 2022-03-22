@@ -1,0 +1,29 @@
+def @main(%input: Tensor[(1, 1960), int8], %v_param_1: Tensor[(20, 8, 1, 8), int8], %v_param_2: Tensor[(8), int32], %v_param_3: Tensor[(10, 4, 8, 8), int8], %v_param_4: Tensor[(8), int32], %v_param_5: Tensor[(4, 3840), int8], %v_param_6: Tensor[(4), int32], output_tensor_names=["Identity"]) -> Tensor[(1, 4), int8] {
+  %0 = reshape(%input, newshape=[-1, 49, 40, 1]) /* ty=Tensor[(1, 49, 40, 1), int8] */;
+  %1 = layout_transform(%0, src_layout="NHWC", dst_layout="NCHW") /* ty=Tensor[(1, 1, 49, 40), int8] */;
+  %2 = layout_transform(%v_param_1, src_layout="HWIO", dst_layout="OIHW") /* ty=Tensor[(8, 1, 20, 8), int8] */;
+  %3 = expand_dims(%v_param_2, axis=0, num_newaxis=3) /* ty=Tensor[(1, 1, 1, 8), int32] */;
+  %4 = qnn.conv2d(%1, %2, -128 /* ty=int32 */, 0 /* ty=int32 */, 0.101562f /* ty=float32 */, meta[relay.Constant][0] /* ty=Tensor[(8), float32] */, padding=[9, 3, 10, 4], channels=8, kernel_size=[20, 8], out_dtype="int32") /* ty=Tensor[(1, 8, 49, 40), int32] */;
+  %5 = layout_transform(%3, src_layout="NHWC", dst_layout="NCHW") /* ty=Tensor[(1, 8, 1, 1), int32] */;
+  %6 = add(%4, %5) /* ty=Tensor[(1, 8, 49, 40), int32] */;
+  %7 = qnn.requantize(%6, meta[relay.Constant][1] /* ty=Tensor[(8), float32] */, 0 /* ty=int32 */, 0.141817f /* ty=float32 */, -128 /* ty=int32 */, axis=1, rounding="UPWARD", compute_dtype="int64", out_dtype="int8") /* ty=Tensor[(1, 8, 49, 40), int8] */;
+  %8 = clip(%7, a_min=-128f, a_max=127f) /* ty=Tensor[(1, 8, 49, 40), int8] */;
+  %9 = nn.max_pool2d(%8, pool_size=[2, 2], strides=[2, 2], padding=[0, 0, 0, 0]) /* ty=Tensor[(1, 8, 24, 20), int8] */;
+  %10 = layout_transform(%v_param_3, src_layout="HWIO", dst_layout="OIHW") /* ty=Tensor[(8, 8, 10, 4), int8] */;
+  %11 = expand_dims(%v_param_4, axis=0, num_newaxis=3) /* ty=Tensor[(1, 1, 1, 8), int32] */;
+  %12 = qnn.conv2d(%9, %10, -128 /* ty=int32 */, 0 /* ty=int32 */, 0.141817f /* ty=float32 */, meta[relay.Constant][2] /* ty=Tensor[(8), float32] */, padding=[4, 1, 5, 2], channels=8, kernel_size=[10, 4], out_dtype="int32") /* ty=Tensor[(1, 8, 24, 20), int32] */;
+  %13 = layout_transform(%11, src_layout="NHWC", dst_layout="NCHW") /* ty=Tensor[(1, 8, 1, 1), int32] */;
+  %14 = add(%12, %13) /* ty=Tensor[(1, 8, 24, 20), int32] */;
+  %15 = qnn.requantize(%14, meta[relay.Constant][3] /* ty=Tensor[(8), float32] */, 0 /* ty=int32 */, 0.0582336f /* ty=float32 */, -128 /* ty=int32 */, axis=1, rounding="UPWARD", compute_dtype="int64", out_dtype="int8") /* ty=Tensor[(1, 8, 24, 20), int8] */;
+  %16 = clip(%15, a_min=-128f, a_max=127f) /* ty=Tensor[(1, 8, 24, 20), int8] */;
+  %17 = layout_transform(%16, src_layout="NCHW", dst_layout="NHWC") /* ty=Tensor[(1, 24, 20, 8), int8] */;
+  %18 = reshape(%17, newshape=[-1, 3840]) /* ty=Tensor[(1, 3840), int8] */;
+  %19 = reshape(%18, newshape=[-1, 3840]) /* ty=Tensor[(1, 3840), int8] */;
+  %20 = qnn.dense(%19, %v_param_5, -128 /* ty=int32 */, 0 /* ty=int32 */, 0.0582336f /* ty=float32 */, 0.00373117f /* ty=float32 */, units=4, out_dtype="int32") /* ty=Tensor[(1, 4), int32] */;
+  %21 = add(%20, %v_param_6) /* ty=Tensor[(1, 4), int32] */;
+  %22 = qnn.requantize(%21, 0.000217279f /* ty=float32 */, 0 /* ty=int32 */, 0.264173f /* ty=float32 */, 27 /* ty=int32 */, rounding="UPWARD", compute_dtype="int64", out_dtype="int8") /* ty=Tensor[(1, 4), int8] */;
+  %23 = qnn.dequantize(%22, 0.264173f /* ty=float32 */, 27 /* ty=int32 */) /* ty=Tensor[(1, 4), float32] */;
+  %24 = nn.softmax(%23) /* ty=Tensor[(1, 4), float32] */;
+  qnn.quantize(%24, 0.00390625f /* ty=float32 */, -128 /* ty=int32 */, out_dtype="int8") /* ty=Tensor[(1, 4), int8] */
+}
+

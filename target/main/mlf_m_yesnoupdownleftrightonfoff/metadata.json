@@ -1,0 +1,160 @@
+{
+  "executors": [
+    "aot"
+  ],
+  "export_datetime": "2022-06-01 13:22:59Z",
+  "external_dependencies": [
+    {
+      "short_name": "tvm_standalone_crt",
+      "url": "./runtime",
+      "url_type": "mlf_path",
+      "version_spec": "0.9.dev1406+g68950873a"
+    }
+  ],
+  "memory": {
+    "functions": {
+      "main": [
+        {
+          "constants_size_bytes": 0,
+          "device": 1,
+          "io_size_bytes": 87834,
+          "workspace_size_bytes": 46560
+        }
+      ],
+      "operator_functions": [
+        {
+          "function_name": "tvmgen_default_fused_nn_softmax_divide_add_clip_round_cast",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_max_pool2d_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_dense_pack_add_fixed_point_multiply_add_clip_cast_clip_1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_avg_pool2d_cast",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_reshape_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_reshape_layout_transform_cast_subtract_layout_transform",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_conv2d_NCHWc_add_cast_multiply_add_right_shift_cast_add_clip_ca_5ff33129d25b2ed1_",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_dense_pack_add_fixed_point_multiply_add_clip_cast_cast_subtract_b438993967aa395c_",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_conv2d_NCHWc_add_cast_multiply_add_right_shift_cast_add_clip_ca_41d3203833793a2a_",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_reshape_cast_subtract_1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_dense_pack_add_fixed_point_multiply_add_clip_cast_clip",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_contrib_conv2d_NCHWc_add_cast_multiply_add_right_shift_cast_add_clip_ca_5ff33129d25b2ed1__1",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_layout_transform_layout_transform_reshape_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        },
+        {
+          "function_name": "tvmgen_default_fused_nn_avg_pool2d_cast_cast_subtract",
+          "workspace": [
+            {
+              "device": 1,
+              "workspace_size_bytes": 0
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "model_name": "default",
+  "style": "full-model",
+  "target": [
+    "c -keys=cpu -link-params=0"
+  ],
+  "version": 6
+}

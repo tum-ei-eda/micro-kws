@@ -1,0 +1,7 @@
+---
+BasedOnStyle: Google
+# KeepEmptyLinesAtTheStartOfBlocks: true
+# SortIncludes: false
+# ColumnLimit: 80
+# IndentWidth: 2
+# DerivePointerAlignment: false
