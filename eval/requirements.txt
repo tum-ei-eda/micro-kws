@@ -1,0 +1,15 @@
+jinja2
+xdg
+gitpython
+networkx
+tqdm
+filelock
+humanize
+pyelftools
+pyserial
+psutil
+pyyaml
+numpy
+pandas
+tflite
+matplotlib
