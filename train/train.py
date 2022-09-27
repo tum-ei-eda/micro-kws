@@ -252,6 +252,12 @@ if __name__ == "__main__":
         dest="micro",
         action="store_false",
     )
+    parser.add_argument(
+        '--model_size_info',
+        type=int,
+        nargs="+",
+        default=[128, 128, 128],
+        help='Model dimensions - different for various models')
 
     FLAGS, _ = parser.parse_known_args()
 
@@ -264,7 +270,7 @@ if __name__ == "__main__":
         FLAGS.dct_coefficient_count,
     )
 
-    model = models.get_model(model_settings, FLAGS.model_architecture, model_name=FLAGS.model_name)
+    model = models.get_model(model_settings, FLAGS.model_architecture, FLAGS.model_size_info, True, model_name=FLAGS.model_name)
 
     audio_processor = data.AudioProcessor(
         data_url=FLAGS.data_url,

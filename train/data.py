@@ -37,6 +37,8 @@ from tensorflow.lite.experimental.microfrontend.python.ops import (
     audio_microfrontend_op as frontend_op,
 )
 
+import copy
+
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 RANDOM_SEED = 59185
 BACKGROUND_NOISE_DIR_NAME = "_background_noise_"
@@ -260,7 +262,8 @@ class AudioProcessor:
                 micro=self.micro,
             ),
             num_parallel_calls=tf.data.experimental.AUTOTUNE,
-        )
+        # ).prefetch(tf.data.experimental.AUTOTUNE).cache()
+        ).cache()
 
         return dataset
 
@@ -468,12 +471,14 @@ class AudioProcessor:
         # We need an arbitrary file to load as the input for the silence samples.
         # It's multiplied by zero later, so the content doesn't matter.
         silence_wav_path = data_index["training"][0]["file"]
-        for set_index in ["validation", "testing", "training"]:
+        for i, set_index in enumerate(["validation", "testing", "training"]):
+            print("set_index", set_index)
             set_size = len(data_index[set_index])  # Size before adding silence and unknown samples.
             silence_size = int(math.ceil(set_size * silence_percentage / 100))
             for _ in range(silence_size):
                 data_index[set_index].append({"label": SILENCE_LABEL, "file": silence_wav_path})
             # Pick some unknowns to add to each partition of the data set.
+            # random.seed(i+10)
             random.shuffle(unknown_index[set_index])
             unknown_size = int(math.ceil(set_size * unknown_percentage / 100))
             data_index[set_index].extend(unknown_index[set_index][:unknown_size])
@@ -483,12 +488,18 @@ class AudioProcessor:
             )  # Size after adding silence and unknown samples.
 
             # Make sure the ordering is random.
+            # random.seed(0)
             random.shuffle(data_index[set_index])
+            data_index[set_index] = copy.deepcopy(data_index[set_index])
 
             # Transform into TF Datasets ready for easier processing later.
             labels, paths = list(zip(*[d.values() for d in data_index[set_index]]))
+            print("labels", labels[:5])
+            print("paths", paths[:5])
             labels = [word_to_index[label] for label in labels]
             self._tf_datasets[set_index] = tf.data.Dataset.from_tensor_slices((list(paths), labels))
+            # print("self._tf_datasets[set_index]", self._tf_datasets[set_index])
+            # print("self._tf_datasets[set_index].take(1).get_single_element()", list(self._tf_datasets[set_index].enumerate(start=5))[:5])
 
     def _find_and_sort_wavs(
         self,
@@ -516,7 +527,7 @@ class AudioProcessor:
         unknown_index = {"validation": [], "testing": [], "training": []}
         all_words = {}
 
-        for wav_path in tf.io.gfile.glob(str(search_pattern)):
+        for wav_path in sorted(tf.io.gfile.glob(str(search_pattern))):
             word = Path(wav_path).parent.name.lower()
 
             # Treat the '_background_noise_' folder as a special case, since we expect
