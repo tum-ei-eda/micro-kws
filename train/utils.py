@@ -72,7 +72,7 @@ def showWaveform(path, title="Sample"):
   plt.show()
 
 
-def visualizeFeature(feature):
+def visualizeFeature(feature, FLAGS):
     # Utility to display a given feature from the dataset inside the notebook
     feature_data, feature_label = feature
 
