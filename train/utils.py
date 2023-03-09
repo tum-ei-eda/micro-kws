@@ -18,6 +18,7 @@ import os
 import wave
 import netron
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 import IPython
 from IPython.display import IFrame
@@ -34,6 +35,8 @@ def isColab():
 
 def showNetron(path):
     port = portpicker.pick_unused_port()
+    if isinstance(path, Path):
+        path = str(path)
     if isColab():
         from google.colab import output
         # Read the model file and start the netron browser.
