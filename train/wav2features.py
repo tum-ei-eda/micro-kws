@@ -84,7 +84,15 @@ def wav_to_features(audio_processor, input_wav, micro=False, quantize=False):
     """
 
     features, _ = audio_processor.process_path(
-        input_wav, None, model_settings, 0, 0, 0, False, None, micro=micro,
+        input_wav,
+        None,
+        model_settings,
+        0,
+        0,
+        0,
+        False,
+        None,
+        micro=micro,
     )
     features = features.numpy()
 
@@ -208,6 +216,7 @@ if __name__ == "__main__":
         testing_percentage=0.1,
         model_settings=model_settings,
         micro=FLAGS.micro,
+        minimal=True,
     )
 
     features = wav_to_features(
