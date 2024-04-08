@@ -15,7 +15,10 @@
 """Functions for converting and quantizing a trained keyword spotting
    model and saving to TFLite."""
 
+import os
+import tempfile
 import argparse
+from pathlib import Path
 
 import tensorflow as tf
 
@@ -57,6 +60,7 @@ def convert(model, audio_processor, checkpoint, quantize, inference_type, tflite
     if quantize:
         # Quantize model and save to disk.
         tflite_model = post_training_quantize(model, inference_type, _rep_dataset)
+        Path(tflite_path).parent.mkdir(parents=True, exist_ok=True)
         with open(tflite_path, "wb") as f:
             f.write(tflite_model)
         print(f"Quantized model saved to {tflite_path}.")
@@ -64,6 +68,7 @@ def convert(model, audio_processor, checkpoint, quantize, inference_type, tflite
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         tflite_model = converter.convert()
+        Path(tflite_path).parent.mkdir(parents=True, exist_ok=True)
         with open(tflite_path, "wb") as f:
             f.write(tflite_model)
         print(f"Converted model saved to {tflite_path}.")
@@ -109,6 +114,14 @@ def main():
         FLAGS.dct_coefficient_count,
     )
 
+    num_classes = len(FLAGS.wanted_words.split(",")) + 2
+
+    if FLAGS.silence_percentage is None:
+        FLAGS.silence_percentage = 100.0 / num_classes
+
+    if FLAGS.unknown_percentage is None:
+        FLAGS.unknown_percentage = 100.0 / num_classes
+
     audio_processor = data.AudioProcessor(
         data_url=FLAGS.data_url,
         data_dir=FLAGS.data_dir,
@@ -145,10 +158,17 @@ if __name__ == "__main__":
         default="http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
         help="Location of speech training data archive on the web.",
     )
+    try:
+        login = os.getlogin()
+    except:
+        login = "unknown"
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/tmp/speech_dataset/",
+        default=os.getenv(
+            "SPEECH_COMMANDS_DIR",
+            default=os.path.join(tempfile.gettempdir(), login, "speech_dataset"),
+        ),
         help="""\
         Where to download the speech training data to.
         """,
@@ -156,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--silence_percentage",
         type=float,
-        default=10.0,
+        default=None,
         help="""\
         How much of the training data should be silence.
         """,
@@ -164,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unknown_percentage",
         type=float,
-        default=10.0,
+        default=None,
         help="""\
         How much of the training data should be unknown words.
         """,
@@ -202,7 +222,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_stride_ms",
         type=float,
-        default=10.0,
+        default=20.0,
         help="How long each spectrogram timeslice is",
     )
     parser.add_argument(
