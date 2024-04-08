@@ -28,6 +28,7 @@ import tarfile
 import hashlib
 import random
 import math
+from tqdm import tqdm
 from enum import Enum
 
 import numpy as np
@@ -36,6 +37,11 @@ from tensorflow.python.ops import gen_audio_ops as audio_ops
 from tensorflow.lite.experimental.microfrontend.python.ops import (
     audio_microfrontend_op as frontend_op,
 )
+
+try:
+    AUTOTUNE = tf.data.AUTOTUNE
+except:
+    AUTOTUNE = tf.data.experimental.AUTOTUNE  # Compatibilty mode for TF2.3
 
 MAX_NUM_WAVS_PER_CLASS = 2**27 - 1  # ~134M
 RANDOM_SEED = 59185
@@ -109,9 +115,7 @@ def calculate_features(
             stride=window_stride,
             magnitude_squared=True,
         )
-        features = audio_ops.mfcc(
-            spectrogram, audio_sample_rate, dct_coefficient_count=num_mfcc
-        )
+        features = audio_ops.mfcc(spectrogram, audio_sample_rate, dct_coefficient_count=num_mfcc)
 
     return features
 
@@ -194,6 +198,7 @@ class AudioProcessor:
         testing_percentage,
         model_settings,
         micro=True,
+        minimal=False,
     ):
         self.data_dir = Path(data_dir)
         self.model_settings = model_settings
@@ -204,15 +209,17 @@ class AudioProcessor:
         self.background_data = None
         self._set_size = {"training": 0, "validation": 0, "testing": 0}
 
-        self._download_and_extract_data(data_url, data_dir)
-        self._prepare_datasets(
-            silence_percentage,
-            unknown_percentage,
-            wanted_words,
-            validation_percentage,
-            testing_percentage,
-        )
-        self._prepare_background_data()
+        # Only download data and setup datasets if required
+        if not minimal:
+            self._download_and_extract_data(data_url, data_dir)
+            self._prepare_datasets(
+                silence_percentage,
+                unknown_percentage,
+                wanted_words,
+                validation_percentage,
+                testing_percentage,
+            )
+            self._prepare_background_data()
 
     def get_data(
         self,
@@ -247,19 +254,48 @@ class AudioProcessor:
         use_background = (self.background_data is not None) and (
             mode == AudioProcessor.Modes.TRAINING
         )
-        dataset = dataset.map(
-            lambda path, label: self.process_path(
-                path,
-                label,
-                self.model_settings,
-                background_frequency,
-                background_volume_range,
-                time_shift,
-                use_background,
-                self.background_data,
-                micro=self.micro,
-            ),
-            num_parallel_calls=tf.data.experimental.AUTOTUNE,
+        dataset = (
+            dataset.map(
+                lambda path, label: self.load_files(
+                    path,
+                    label,
+                    self.model_settings,
+                ),
+                num_parallel_calls=AUTOTUNE,
+            )
+            .cache()
+            .map(
+                lambda audio, label: self.add_shift(
+                    audio,
+                    label,
+                    self.model_settings,
+                    time_shift,
+                ),
+                num_parallel_calls=AUTOTUNE,
+            )
+            .batch(256)
+            .map(
+                lambda audio, label: self.add_background(
+                    audio,
+                    label,
+                    self.model_settings,
+                    background_frequency,
+                    background_volume_range,
+                    use_background,
+                    self.background_data,
+                ),
+                num_parallel_calls=AUTOTUNE,
+            )
+            .unbatch()
+            .map(
+                lambda audio, label: self.create_features(
+                    audio,
+                    label,
+                    self.model_settings,
+                    micro=self.micro,
+                ),
+                num_parallel_calls=AUTOTUNE,
+            )
         )
 
         return dataset
@@ -286,42 +322,28 @@ class AudioProcessor:
             ValueError("Incorrect dataset type given")
 
     @staticmethod
-    def process_path(
+    def load_files(
         path,
         label,
         model_settings,
-        background_frequency,
-        background_volume_range,
-        time_shift_samples,
-        use_background,
-        background_data,
-        micro=False,
     ):
-        """Load wav files and calculate features.
-
-        Random shifting of samples and adding in background noise is done within this function as well.
-        This function is meant to be mapped onto a TF Dataset by using a lambda function.
-
-        Args:
-            path: Path to the wav file to load.
-            label: Integer label for classifying the audio clip.
-            model_settings: Dictionary of settings for model being trained.
-            background_frequency: How many clips will have background noise, 0.0 to 1.0.
-            background_volume_range: How loud the background noise will be.
-            time_shift_samples: How much to randomly shift the clips by.
-            use_background: Add in background noise to audio clips or not.
-            background_data: Ragged tensor of loaded background noise samples.
-
-        Returns:
-            Tuple of calculated flattened feature and its class label.
-        """
-
         desired_samples = model_settings["desired_samples"]
         audio, sample_rate = load_wav_file(path, desired_samples=desired_samples)
 
         # Make our own silence audio data.
         if label == SILENCE_INDEX:
             audio = tf.multiply(audio, 0)
+
+        return audio, label
+
+    @staticmethod
+    def add_shift(
+        audio,
+        label,
+        model_settings,
+        time_shift_samples,
+    ):
+        desired_samples = model_settings["desired_samples"]
 
         # Shift samples start position and pad any gaps with zeros.
         if time_shift_samples > 0:
@@ -342,8 +364,20 @@ class AudioProcessor:
 
         padded_foreground = tf.pad(audio, time_shift_padding, mode="CONSTANT")
         sliced_foreground = tf.slice(padded_foreground, time_shift_offset, [desired_samples, -1])
+        return sliced_foreground, label
 
-        # Get a random section of background noise.
+    @staticmethod
+    def add_background(
+        audio,
+        label,
+        model_settings,
+        background_frequency,
+        background_volume_range,
+        use_background,
+        background_data,
+    ):
+        desired_samples = model_settings["desired_samples"]
+
         if use_background:
             background_index = tf.random.uniform(
                 shape=(), maxval=background_data.shape[0], dtype=tf.int32
@@ -368,11 +402,22 @@ class AudioProcessor:
 
         # Mix in background noise.
         background_mul = tf.multiply(background_reshaped, background_volume)
-        background_add = tf.add(background_mul, sliced_foreground)
+        background_add = tf.add(background_mul, audio)
         background_clamp = tf.clip_by_value(background_add, -1.0, 1.0)
 
+        return background_clamp, label
+
+    @staticmethod
+    def create_features(
+        audio,
+        label,
+        model_settings,
+        micro=False,
+    ):
+        sample_rate = 16000
+
         features = calculate_features(
-            background_clamp,
+            audio,
             sample_rate,
             model_settings["window_size_samples"],
             model_settings["window_stride_samples"],
@@ -397,7 +442,9 @@ class AudioProcessor:
         filename = data_url.split("/")[-1]
         filepath = target_directory / filename
 
-        if not target_directory.exists() or (target_directory.exists() and len(os.listdir(target_directory)) == 0):
+        if not target_directory.exists() or (
+            target_directory.exists() and len(os.listdir(target_directory)) == 0
+        ):
             target_directory.mkdir(exist_ok=True, parents=True)
 
             def _report_hook(block_num, block_size, total_size):
@@ -410,7 +457,30 @@ class AudioProcessor:
                 sys.stdout.write(s)
                 sys.stdout.flush()
 
-            filepath, _ = urllib.request.urlretrieve(data_url, filepath, _report_hook)
+            def my_hook(t):
+                last_b = [0]
+
+                def update_to(b=1, bsize=1, tsize=None):
+                    """
+                    b  : int, optional
+                        Number of blocks transferred so far [default: 1].
+                    bsize  : int, optional
+                        Size of each block (in tqdm units) [default: 1].
+                    tsize  : int, optional
+                        Total size (in tqdm units). If [default: None] remains unchanged.
+                    """
+                    if tsize is not None:
+                        t.total = tsize
+                    t.update((b - last_b[0]) * bsize)
+                    last_b[0] = b
+
+                return update_to
+
+            # filepath, _ = urllib.request.urlretrieve(data_url, filepath, _report_hook)
+            with tqdm(
+                unit="B", unit_scale=True, unit_divisor=1024, miniters=100, desc="Dataset"
+            ) as t:
+                filepath, _ = urllib.request.urlretrieve(data_url, filepath, reporthook=my_hook(t))
             print()
 
             print(f"Untarring {filename}...")
@@ -454,7 +524,8 @@ class AudioProcessor:
         for index, wanted_word in enumerate(wanted_words):
             if wanted_word not in all_words:
                 raise Exception(
-                    f'Tried to find {wanted_word} in labels but only found: {", ".join(all_words.keys())}'
+                    f"Tried to find {wanted_word} in labels but only found:"
+                    f" {', '.join(all_words.keys())}"
                 )
 
         word_to_index = {}
