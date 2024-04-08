@@ -14,6 +14,8 @@
 # Modifications Copyright 2022 Chair of Electronic Design Automation, TUM
 """Functions to run inference and test keyword spotting models in tflite format."""
 
+import os
+import tempfile
 import argparse
 
 import tensorflow as tf
@@ -21,10 +23,10 @@ import numpy as np
 
 import data
 import models
-from test import calculate_accuracy
+from test import get_accuracy, get_confusion_matrix
 
 
-def tflite_test(model_settings, audio_processor, tflite_path):
+def tflite_test(model_settings, audio_processor, tflite_path, out=None, mode="test"):
     """Calculate accuracy and confusion matrices on the test set.
 
     A TFLite model used for doing testing.
@@ -33,29 +35,40 @@ def tflite_test(model_settings, audio_processor, tflite_path):
         model_settings: Dictionary of common model settings.
         audio_processor: Audio processor class object.
         tflite_path: Path to TFLite file to use for inference.
+        out: File where the determined accuracy should be written to.
     """
-    test_data = audio_processor.get_data(audio_processor.Modes.TESTING).batch(1)
+    if mode == "test":
+        mode_ = audio_processor.Modes.TESTING
+    elif mode == "validation":
+        mode_ = audio_processor.Modes.VALIDATION
+    elif mode == "train":
+        mode_ = audio_processor.Modes.TRAINING
+    else:
+        raise RuntimeError(f"Unsupported mode: {mode}")
+
+    test_data = audio_processor.get_data(mode_).batch(1)
     expected_indices = np.concatenate([y for x, y in test_data])
     predicted_indices = []
 
-    print("Running testing on test set...")
+    print(f"Running testing on {mode} set...")
+
     for mfcc, label in test_data:
         prediction = tflite_inference(mfcc, tflite_path)
         predicted_indices.append(np.squeeze(tf.argmax(prediction, axis=1)))
 
-    test_accuracy = calculate_accuracy(predicted_indices, expected_indices)
-    confusion_matrix = tf.math.confusion_matrix(
-        expected_indices,
-        predicted_indices,
-        num_classes=model_settings["label_count"],
-    )
+    accuracy = get_accuracy(predicted_indices, expected_indices)
+    print(f"{mode} accuracy = {accuracy * 100:.2f}%(N={audio_processor.set_size(mode_)})")
+    print()
 
-    print("Confusion matrix:")
+    confusion_matrix = get_confusion_matrix(expected_indices, predicted_indices, model_settings)
+    print("confusion matrix:")
     print(confusion_matrix.numpy())
-    print(
-        f"Test accuracy = {test_accuracy * 100:.2f}%"
-        f"(N={audio_processor.set_size(audio_processor.Modes.TESTING)})"
-    )
+
+    if out:
+        with open(out, "w") as handle:
+            handle.write(f"ACC={accuracy*100:.2f}")
+
+    return accuracy, confusion_matrix
 
 
 def tflite_inference(input_data, tflite_path):
@@ -124,7 +137,7 @@ def main():
         micro=FLAGS.micro,
     )
 
-    tflite_test(model_settings, audio_processor, FLAGS.tflite_path)
+    tflite_test(model_settings, audio_processor, FLAGS.tflite_path, FLAGS.out, FLAGS.mode)
 
 
 if __name__ == "__main__":
@@ -135,10 +148,17 @@ if __name__ == "__main__":
         default="http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
         help="Location of speech training data archive on the web.",
     )
+    try:
+        login = os.getlogin()
+    except:
+        login = "unknown"
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/tmp/speech_dataset/",
+        default=os.getenv(
+            "SPEECH_COMMANDS_DIR",
+            default=os.path.join(tempfile.gettempdir(), login, "speech_dataset"),
+        ),
         help="""\
         Where to download the speech training data to.
         """,
@@ -225,6 +245,13 @@ if __name__ == "__main__":
         dest="micro",
         action="store_false",
     )
+    parser.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="File which should contain the determined accuracy",
+    )
+    parser.add_argument("--mode", choices=["test", "validate", "train"], default="test")
 
     FLAGS, _ = parser.parse_known_args()
     main()
