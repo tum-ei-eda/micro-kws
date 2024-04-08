@@ -14,7 +14,11 @@
 # Modifications Copyright 2022 Chair of Electronic Design Automation, TUM
 """Functions for training simple keyword spotting models."""
 
+import os
+import glob
+import shutil
 import argparse
+import tempfile
 from pathlib import Path
 
 import tensorflow as tf
@@ -65,7 +69,7 @@ def train(model, audio_processor):
     training_epoch_max = int(np.ceil(training_steps_max / FLAGS.eval_step_interval))
 
     # Callbacks.
-    train_dir = Path(FLAGS.train_dir) / "best"
+    train_dir = Path(FLAGS.train_dir) / FLAGS.model_name / "best"
     train_dir.mkdir(parents=True, exist_ok=True)
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=(train_dir / (FLAGS.model_name + "_{val_accuracy:.3f}_ckpt")),
@@ -92,6 +96,15 @@ def train(model, audio_processor):
     test_loss, test_acc = model.evaluate(x=test_data)
     print(f"Final test accuracy: {test_acc*100:.2f}%")
 
+    # Extract best checkpoint
+    latest = tf.train.latest_checkpoint(Path(FLAGS.train_dir) / FLAGS.model_name / "best")
+    latest_name = Path(latest).name
+
+    files = glob.glob(f"{latest}.*")
+    files_map = {file: file.replace(latest_name, f"{FLAGS.model_name}_best_ckpt") for file in files}
+    for src, dest in files_map.items():
+        shutil.copy(src, dest)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -101,10 +114,17 @@ if __name__ == "__main__":
         default="http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
         help="Location of speech training data archive on the web.",
     )
+    try:
+        login = os.getlogin()
+    except:
+        login = "unknown"
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/tmp/speech_dataset/",
+        default=os.getenv(
+            "SPEECH_COMMANDS_DIR",
+            default=os.path.join(tempfile.gettempdir(), login, "speech_dataset"),
+        ),
         help="""\
         Where to download the speech training data to.
         """,
@@ -128,7 +148,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--silence_percentage",
         type=float,
-        default=25.0,
+        default=None,  # 25.0
         help="""\
         How much of the training data should be silence.
         """,
@@ -136,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unknown_percentage",
         type=float,
-        default=25.0,
+        default=None,  # 25.0
         help="""\
         How much of the training data should be unknown words.
         """,
@@ -230,16 +250,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--train_dir",
         type=str,
-        default="/tmp/speech_commands_train",
+        default="training",
         help="Directory to write event logs and checkpoint.",
     )
     parser.add_argument(
         "--model_architecture",
         type=str,
-        default="dnn",
+        default="micro_kws_student",
         help="What model architecture to use",
     )
-    parser.add_argument("--model_name", type=str, default="kws_model", help="Name of the model")
+    parser.add_argument("--model_name", type=str, default="micro_kws", help="Name of the model")
     parser.add_argument(
         "--micro",
         dest="micro",
@@ -265,6 +285,14 @@ if __name__ == "__main__":
     )
 
     model = models.get_model(model_settings, FLAGS.model_architecture, model_name=FLAGS.model_name)
+
+    num_classes = len(FLAGS.wanted_words.split(",")) + 2
+
+    if FLAGS.silence_percentage is None:
+        FLAGS.silence_percentage = 100.0 / num_classes
+
+    if FLAGS.unknown_percentage is None:
+        FLAGS.unknown_percentage = 100.0 / num_classes
 
     audio_processor = data.AudioProcessor(
         data_url=FLAGS.data_url,
