@@ -14,6 +14,8 @@
 # Modifications Copyright 2022 Chair of Electronic Design Automation, TUM
 """Functions for testing trained keyword spotting models from checkpoint files."""
 
+import os
+import tempfile
 import argparse
 
 import numpy as np
@@ -29,63 +31,41 @@ def test(model, audio_processor, model_settings):
     Model is created and weights loaded from supplied command line arguments.
     """
     model.load_weights(FLAGS.checkpoint).expect_partial()
+    if FLAGS.mode == "test":
+        mode = audio_processor.Modes.TESTING
+    elif FLAGS.mode == "validation":
+        mode = audio_processor.Modes.VALIDATION
+    elif FLAGS.mode == "train":
+        mode = audio_processor.Modes.TRAINING
+    else:
+        raise RuntimeError(f"Unsupported mode: {mode}")
 
-    print("Running testing on validation set...")
-    get_val_accuracy(model_settings, model, audio_processor, FLAGS.batch_size)
+    data = audio_processor.get_data(mode).batch(FLAGS.batch_size)
+    expected_indices = np.concatenate([y for x, y in data])
+
+    predictions = model.predict(data)
+    predicted_indices = tf.argmax(predictions, axis=1)
+
+    print(f"Running testing on {FLAGS.mode} set...")
+    accuracy = get_accuracy(expected_indices, predicted_indices)
+    print(f"{mode} accuracy = {accuracy * 100:.2f}%(N={audio_processor.set_size(mode)})")
     print()
-    print("Running testing on test set...")
-    get_test_accuracy(model_settings, model, audio_processor, FLAGS.batch_size)
+
+    confusion_matrix = get_confusion_matrix(expected_indices, predicted_indices, model_settings)
+    print("confusion matrix:")
+    print(confusion_matrix.numpy())
 
 
-def get_val_accuracy(model_settings, model, audio_processor, batch_size, verbose=True):
-    """Evaluate on validation set."""
-    val_data = audio_processor.get_data(audio_processor.Modes.VALIDATION).batch(batch_size)
-    expected_indices = np.concatenate([y for x, y in val_data])
-
-    predictions = model.predict(val_data)
-    predicted_indices = tf.argmax(predictions, axis=1)
-
-    val_accuracy = calculate_accuracy(predicted_indices, expected_indices)
-    if verbose:
-        confusion_matrix = tf.math.confusion_matrix(
-            expected_indices,
-            predicted_indices,
-            num_classes=model_settings["label_count"],
-        )
-        print("Confusion matrix:")
-        print(confusion_matrix.numpy())
-        print(
-            f"Validation accuracy = {val_accuracy * 100:.2f}%"
-            f"(N={audio_processor.set_size(audio_processor.Modes.VALIDATION)})"
-        )
-    return val_accuracy
+def get_confusion_matrix(expected_indices, predicted_indices, model_settings):
+    confusion_matrix = tf.math.confusion_matrix(
+        expected_indices,
+        predicted_indices,
+        num_classes=model_settings["label_count"],
+    )
+    return confusion_matrix
 
 
-def get_test_accuracy(model_settings, model, audio_processor, batch_size, verbose=True):
-    """Evaluate on testing set."""
-    test_data = audio_processor.get_data(audio_processor.Modes.TESTING).batch(batch_size)
-    expected_indices = np.concatenate([y for x, y in test_data])
-
-    predictions = model.predict(test_data)
-    predicted_indices = tf.argmax(predictions, axis=1)
-
-    test_accuracy = calculate_accuracy(predicted_indices, expected_indices)
-    if verbose:
-        confusion_matrix = tf.math.confusion_matrix(
-            expected_indices,
-            predicted_indices,
-            num_classes=model_settings["label_count"],
-        )
-        print("Confusion matrix:")
-        print(confusion_matrix.numpy())
-        print(
-            f"Test accuracy = {test_accuracy * 100:.2f}%"
-            f"(N={audio_processor.set_size(audio_processor.Modes.TESTING)})"
-        )
-    return test_accuracy
-
-
-def calculate_accuracy(predicted_indices, expected_indices):
+def get_accuracy(predicted_indices, expected_indices):
     """Calculates and returns accuracy.
 
     Args:
@@ -108,10 +88,17 @@ if __name__ == "__main__":
         default="http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz",
         help="Location of speech training data archive on the web.",
     )
+    try:
+        login = os.getlogin()
+    except:
+        login = "unknown"
     parser.add_argument(
         "--data_dir",
         type=str,
-        default="/tmp/speech_dataset/",
+        default=os.getenv(
+            "SPEECH_COMMANDS_DIR",
+            default=os.path.join(tempfile.gettempdir(), login, "speech_dataset"),
+        ),
         help="""\
         Where to download the speech training data to.
         """,
@@ -119,7 +106,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--silence_percentage",
         type=float,
-        default=10.0,
+        default=None,
         help="""\
         How much of the training data should be silence.
         """,
@@ -127,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unknown_percentage",
         type=float,
-        default=10.0,
+        default=None,
         help="""\
         How much of the training data should be unknown words.
         """,
@@ -165,7 +152,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--window_stride_ms",
         type=float,
-        default=10.0,
+        default=20.0,
         help="How long each spectrogram timeslice is",
     )
     parser.add_argument(
@@ -212,6 +199,7 @@ if __name__ == "__main__":
         dest="micro",
         action="store_false",
     )
+    parser.add_argument("--mode", choices=["test", "validate", "train"], default="test")
 
     FLAGS, _ = parser.parse_known_args()
 
@@ -225,6 +213,14 @@ if __name__ == "__main__":
     )
 
     model = models.get_model(model_settings, FLAGS.model_architecture)
+
+    num_classes = len(FLAGS.wanted_words.split(",")) + 2
+
+    if FLAGS.silence_percentage is None:
+        FLAGS.silence_percentage = 100.0 / num_classes
+
+    if FLAGS.unknown_percentage is None:
+        FLAGS.unknown_percentage = 100.0 / num_classes
 
     audio_processor = data.AudioProcessor(
         data_url=FLAGS.data_url,
