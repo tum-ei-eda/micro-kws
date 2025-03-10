@@ -23,7 +23,7 @@ The training commands with all the hyperparameters to reproduce the models shown
 ## Testing
 To run inference on the trained model from a checkpoint and get accuracy on validation and test sets, run:
 ```
-python test.py --model_architecture dnn --model_size_info 128 128 128 --checkpoint <checkpoint_path>
+python test_model.py --model_architecture dnn --model_size_info 128 128 128 --checkpoint <checkpoint_path>
 ```
 The parameters used here should match those used in the Training step.
 

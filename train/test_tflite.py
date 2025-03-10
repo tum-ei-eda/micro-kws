@@ -23,7 +23,7 @@ import numpy as np
 
 import data
 import models
-from test import get_accuracy, get_confusion_matrix
+from test_model import get_accuracy, get_confusion_matrix
 
 
 def tflite_test(model_settings, audio_processor, tflite_path, out=None, mode="test"):
