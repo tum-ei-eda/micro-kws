@@ -14,3 +14,4 @@ tflite~=2.10
 # misc requirements
 pytest
 tqdm
+portpicker
