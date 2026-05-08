@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build -t microkws-docker .
+docker build -t philippvk/micro-kws .
