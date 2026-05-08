@@ -22,7 +22,7 @@
   "customizations": {
     "vscode": {
       "settings": {
-        "chat.agent.enabled": false"
+        "chat.agent.enabled": false
       },
       "extensions": [
         "ms-vscode.cpptools",
