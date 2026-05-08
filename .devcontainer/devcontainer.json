@@ -30,7 +30,9 @@
         "ms-python.python",
         "ms-python.black-formatter",
         "Gruntfuggly.todo-tree",
-        "espressif.esp-idf-extension"
+        "espressif.esp-idf-extension",
+        "ms-toolsai.jupyter",
+        "ms-azuretools.vscode-containers"
       ]
     }
   }
