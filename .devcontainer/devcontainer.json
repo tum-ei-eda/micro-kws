@@ -12,11 +12,6 @@
     "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
   ],
   "runArgs": [
-    "--net=host",
-    "--pid=host",
-    "--ipc=host",
-    "--hostname=microkws",
-    "--add-host=microkws:127.0.0.1",
     "--name=microkws",
     "-e",
     "DISPLAY=${env:DISPLAY}"
@@ -26,6 +21,9 @@
   },
   "customizations": {
     "vscode": {
+      "settings": {
+        "chat.agent.enabled": false"
+      },
       "extensions": [
         "ms-vscode.cpptools",
         "ms-vscode.cmake-tools",
