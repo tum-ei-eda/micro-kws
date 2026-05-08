@@ -32,3 +32,12 @@ RUN cd /tmp/ \
     && tar xf speech_commands_v0.02.tar.gz -C speech_dataset
 
 ENV SPEECH_COMMANDS_DIR=/tmp/speech_dataset
+
+RUN pip install --no-cache-dir \
+    tensorflow matplotlib
+
+RUN pip install --no-cache-dir \
+    pyusb pyserial tflite
+
+RUN pip install --no-cache-dir \
+    tvm==0.16.0 -f https://philippvk.github.io/tlc-pack.github.io/wheels
