@@ -1,6 +1,6 @@
 {
   "name": "MicroKWS Devcontainer",
-  "image": "micro-kws-docker",
+  "image": "philippvk/micro-kws",
   "build": {
 		"dockerfile": "Dockerfile",
 		"args": {
