@@ -1,0 +1,39 @@
+{
+  "name": "MicroKWS Devcontainer",
+  "image": "micro-kws-docker",
+  "build": {
+		"dockerfile": "Dockerfile",
+		"args": {
+			"BASE_IMAGE": "espressif/idf:v6.0.1"
+		}
+	},
+  "mounts": [
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
+    "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "--net=host",
+    "--pid=host",
+    "--ipc=host",
+    "--hostname=microkws",
+    "--add-host=microkws:127.0.0.1",
+    "--name=microkws",
+    "-e",
+    "DISPLAY=${env:DISPLAY}"
+  ],
+  "containerEnv": {
+    "DISPLAY": "unix:0"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "Gruntfuggly.todo-tree",
+        "espressif.esp-idf-extension"
+      ]
+    }
+  }
+}
