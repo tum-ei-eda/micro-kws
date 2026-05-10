@@ -7,10 +7,10 @@
 			"BASE_IMAGE": "espressif/idf:v6.0.1"
 		}
 	},
-  "mounts": [
+  /*"mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
     "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
-  ],
+  ],*/
   "runArgs": [
     "--name=microkws",
     "-e",
@@ -23,7 +23,7 @@
     "vscode": {
       "settings": {
         "chat.agent.enabled": false,
-        "python.defaultInterpreterPath": "/opt/venv/bin/python"
+        "python.defaultInterpreterPath": "/opt/microkws/venv/bin/python"
       },
       "extensions": [
         "ms-vscode.cpptools",

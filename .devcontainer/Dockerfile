@@ -11,11 +11,13 @@ RUN apt-get update && \
     && rm -rf /var/cache/apt/archives/ \
     && rm -rf /var/lib/apt/lists
 
+ENV VENV_DIR=/opt/mirokws/venv
+
 # Create virtual environment
-RUN python3 -m venv /opt/venv
+RUN python3 -m venv $VENV_DIR
 
 # Activate venv by default
-ENV PATH="/opt/venv/bin:${PATH}"
+ENV PATH="$VENV_DIR/bin:${PATH}"
 
 # Upgrade pip inside venv
 RUN pip install --upgrade pip
@@ -26,12 +28,12 @@ RUN pip install --no-cache-dir \
     jupyter \
     notebook
 
+ENV SPEECH_COMMANDS_DIR=/opt/microkws/speech_dataset
+
 RUN cd /tmp/ \
     && wget --no-verbose http://download.tensorflow.org/data/speech_commands_v0.02.tar.gz \
-    && mkdir -p speech_dataset \
-    && tar xf speech_commands_v0.02.tar.gz -C speech_dataset
-
-ENV SPEECH_COMMANDS_DIR=/tmp/speech_dataset
+    && mkdir -p $SPEECH_COMMANDS_DIR \
+    && tar xf speech_commands_v0.02.tar.gz -C $SPEECH_COMMANDS_DIR
 
 RUN pip install --no-cache-dir \
     tensorflow matplotlib
