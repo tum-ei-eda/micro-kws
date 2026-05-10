@@ -1,5 +1,3 @@
-<img width="404" height="440" alt="grafik" src="https://github.com/user-attachments/assets/3a3f2403-0123-45df-afb6-145accc6af2a" /># Micro KWS
-
 Complete flow for keyword spotting on microcontrollers. From data collection to data preparation to training and deployment.
 
 ## Context
