@@ -1,12 +1,12 @@
 {
   "name": "MicroKWS Devcontainer",
-  "image": "philippvk/micro-kws",
-  "build": {
+  "image": "philippvk/micro-kws:base-latest",
+  /*"build": {
 		"dockerfile": "Dockerfile",
 		"args": {
 			"BASE_IMAGE": "philippvk/micro-kws:base-latest"
 		}
-	},
+	},*/
   /*"mounts": [
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached",
     "source=/dev/dri,target=/dev/dri,type=bind,consistency=cached"
