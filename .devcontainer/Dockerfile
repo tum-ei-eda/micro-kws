@@ -11,7 +11,7 @@ RUN apt-get update && \
     && rm -rf /var/cache/apt/archives/ \
     && rm -rf /var/lib/apt/lists
 
-ENV VENV_DIR=/opt/mirokws/venv
+ENV VENV_DIR=/opt/microkws/venv
 
 # Create virtual environment
 RUN python3 -m venv $VENV_DIR
