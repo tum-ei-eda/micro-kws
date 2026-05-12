@@ -57,17 +57,22 @@ The main limitation of the Github-hosted Codespace (Devcontainer) are:
 - There is some free quota for CPU usage and disk storage depending on your GitHub subscription (Free, Pro,...). After the Quota is  exceeded there might be some fees. Hence, make sure to shutdown your instance if you don't need it
 - After 30 minutes of inactivity the instance will be turned of. However you should still be able to reboot the insytance and access your data for a while.
 
+*Warning*: Due to the size of the image, you will have to use a machine with at least 8 cores to have anough disk space available. We are trying to reduce the size of the image in the future.
+
 **Steps:**
 
 1. Open this Repository on GitHub
 2. Click the "Clone" button, select the Codespaces tab and create an new codespace. You can also resume existing sessions here. (See screenshot)
 3. ...
 
+You can also use a local VSCode client instead of the web-version to connect to the instance:
+
+<img width="411" height="601" alt="image" src="https://github.com/user-attachments/assets/2dbb324f-b4c4-4955-9cc4-9a14f27375e9" />
+
+
 ### VSCode Devcontainer (Local)
 
 This approach uses the same Devcontainer mentioned above but utilizes the local machine (which needs a full VSCode and Docker installation) for executing the container. This make a lot of sense youi you have a powerful machine available but don't want to mess with installing all dependencies. Forwarding yout USB/Serial ports for flashing and monitory should be feasible (however we haven't tested it yet).
-
-TODO: Screenshot
 
 **Steps:**
 
@@ -75,6 +80,7 @@ TODO: Screenshot
 2. Make sure that the Dev Containers extension is installed
 3. Press F1 and run the action "Dev conatiners: Open Folder in container"
 
+<img width="741" height="103" alt="image" src="https://github.com/user-attachments/assets/9f14012f-c412-4ad9-9308-f3169172c781" />
 
 ### Fully-local Development
 
