@@ -15,6 +15,7 @@
 """Functions for training simple keyword spotting models."""
 
 import os
+import re
 import glob
 import shutil
 import argparse
@@ -33,6 +34,19 @@ try:
 except:
     AUTOTUNE = tf.data.experimental.AUTOTUNE  # Compatibilty mode for TF2.3
 
+
+def find_best_h5_checkpoint(checkpoint_dir):
+    def parse_acc(filename):
+        matches = re.compile(r".*_(\d+\.\d+)_ckpt\.weights\.h5").match(filename)
+        return float(matches.group(1))
+
+    files = list(checkpoint_dir.glob("*.h5"))
+    if files:
+        files_acc = [(file, parse_acc(file.name)) for file in files]
+        latest_file = max(files_acc, key=lambda x: x[1])[0]
+        return latest_file
+    else:
+        return None
 
 def train(model, audio_processor):
     # We decay learning rate in a constant piecewise way to help learning.
